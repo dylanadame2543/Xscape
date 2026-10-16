@@ -21,18 +21,33 @@
     .frame {
       position: relative;
       width: 100%;
-      aspect-ratio: 16 / 9;
+      max-width: 580px;
       background: #fff;
-      border-radius: 8px;
+      border: 1px solid #c8c6c4;
       overflow: hidden;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
-    .frame iframe {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      border: 0;
+    .frame h2 {
+      margin: 0;
+      padding: 8px;
+      text-align: center;
+      font-size: 1rem;
+      background: #f3f2f1;
+      border-bottom: 1px solid #c8c6c4;
+    }
+    .cuerpo { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 16px; }
+    .leyenda { flex: 1 1 150px; font-size: 0.9rem; }
+    .leyenda b { display: block; margin-bottom: 8px; font-style: italic; font-weight: 600; }
+    .leyenda div { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+    .leyenda i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+    #dona { flex: 1 1 220px; max-width: 300px; }
+    #dona path { stroke: none; }
+    #dona path:hover { opacity: .85; }
+    #dona text { fill: #fff; font: 700 11px Segoe UI, Arial, sans-serif; text-anchor: middle; pointer-events: none; }
+    #tip {
+      position: fixed; display: none; pointer-events: none; z-index: 10;
+      background: #fff; border: 1px solid #c8c6c4; padding: 6px 10px; font-size: 0.8rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     }
   </style>
 </head>
@@ -42,13 +57,72 @@
   </header>
   <main>
     <div class="frame">
-      <!-- Reemplaza el valor de src por la URL que te da "Publicar en la web" en Power BI -->
-      <iframe
-        title="Dashboard Power BI"
-        src="PEGA_AQUI_TU_URL_DE_POWER_BI"
-        allowfullscreen="true">
-      </iframe>
+      <h2>Recaudación de ventas</h2>
+      <div class="cuerpo">
+        <div class="leyenda" id="leyenda"><b>Tipos de cafe</b></div>
+        <svg id="dona" viewBox="0 0 300 300" role="img" aria-label="Recaudación de ventas por tipo de café"></svg>
+      </div>
     </div>
+    <div id="tip"></div>
   </main>
+
+  <script>
+    // Equivale al visual del informe: Suma de money por coffee_name, orden descendente (tabla index_1)
+    const datos = [
+      ["Latte", 27866.30],
+      ["Americano with Milk", 25269.12],
+      ["Cappuccino", 18034.14],
+      ["Americano", 15062.26],
+      ["Hot Chocolate", 10172.46],
+      ["Cocoa", 8678.16],
+      ["Cortado", 7534.86],
+      ["Espresso", 2814.28]
+    ];
+    // Colores del tema del informe (CY26SU05)
+    const colores = ["#118DFF", "#12239E", "#E66C37", "#6B007B", "#E044A7", "#744EC2", "#D9B300", "#D64550"];
+
+    const total = datos.reduce((s, d) => s + d[1], 0);
+    const svg = document.getElementById("dona");
+    const leyenda = document.getElementById("leyenda");
+    const tip = document.getElementById("tip");
+    const NS = "http://www.w3.org/2000/svg";
+    const C = 150, R = 140, r = 70, rt = (R + r) / 2;
+    const punto = (radio, a) => [C + radio * Math.cos(a), C + radio * Math.sin(a)];
+    const fmt = n => n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    let ang = -Math.PI / 2;
+    datos.forEach(([nombre, valor], i) => {
+      const pct = valor / total * 100;
+      const a2 = ang + valor / total * 2 * Math.PI;
+      const grande = a2 - ang > Math.PI ? 1 : 0;
+      const [x1, y1] = punto(R, ang), [x2, y2] = punto(R, a2);
+      const [x3, y3] = punto(r, a2), [x4, y4] = punto(r, ang);
+
+      const p = document.createElementNS(NS, "path");
+      p.setAttribute("d", `M${x1} ${y1}A${R} ${R} 0 ${grande} 1 ${x2} ${y2}L${x3} ${y3}A${r} ${r} 0 ${grande} 0 ${x4} ${y4}Z`);
+      p.setAttribute("fill", colores[i]);
+      p.addEventListener("mousemove", e => {
+        tip.innerHTML = `${nombre}<br>Suma de money: <b>${fmt(valor)}</b> (${fmt(pct)}%)`;
+        tip.style.display = "block";
+        tip.style.left = e.clientX + 12 + "px";
+        tip.style.top = e.clientY + 12 + "px";
+      });
+      p.addEventListener("mouseleave", () => tip.style.display = "none");
+      svg.appendChild(p);
+
+      if (pct >= 4) { // en rebanadas muy delgadas la etiqueta no cabe (se ve al pasar el cursor)
+        const [tx, ty] = punto(rt, (ang + a2) / 2);
+        const t = document.createElementNS(NS, "text");
+        t.setAttribute("x", tx);
+        t.setAttribute("y", ty + 4);
+        t.textContent = fmt(pct) + "%";
+        svg.appendChild(t);
+      }
+
+      leyenda.insertAdjacentHTML("beforeend", `<div><i style="background:${colores[i]}"></i>${nombre}</div>`);
+      ang = a2;
+    });
+  </script>
 </body>
 </html>
+
